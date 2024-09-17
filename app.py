@@ -50,7 +50,7 @@ def upload_image():
         os.remove(img_path)
 
         # Return the prediction as JSON
-        return jsonify({'prediction': f'The model predicts: {prediction}'})
+        return jsonify({'prediction': f'The model prediction: {prediction}'})
     
     return render_template('upload.html')
 
