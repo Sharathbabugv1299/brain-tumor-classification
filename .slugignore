@@ -1,0 +1,7 @@
+*.log
+*.csv
+*.md
+tests/
+.git/
+.env
+docs/
