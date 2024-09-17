@@ -29,15 +29,23 @@ model_path = 'fine_tuned_resnet50_brain_tumor.h5'
 if not os.path.exists(model_path):
     download_model(model_url, model_path)
 
-# Load the model and check
 def load_model_check():
+    if not os.path.exists(model_path):
+        download_model(model_url, model_path)
+        if not os.path.exists(model_path):
+            print("Model download failed. Exiting.")
+            return None
+    
     try:
         print("Loading model...")
         model_test = load_model(model_path)
         print("Model loaded successfully.")
         return model_test
+    except OSError as e:
+        print(f"OSError while loading the model: {e}")
+        return None
     except Exception as e:
-        print(f"Error loading the model: {e}")
+        print(f"General error while loading the model: {e}")
         return None
 
 # Load the model
