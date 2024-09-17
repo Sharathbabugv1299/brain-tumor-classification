@@ -1,71 +1,64 @@
 import numpy as np
 import os
-import logging
+import requests
 from flask import Flask, request, render_template, jsonify
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.models import load_model
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
+# Function to download the model file from GitHub
+def download_model(url, filename):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Check if the request was successful
+        with open(filename, 'wb') as f:
+            f.write(response.content)
+        print(f"Model downloaded and saved as {filename}.")
+    except Exception as e:
+        print(f"Error downloading the model: {e}")
+
+# URL of the raw model file on GitHub
+model_url = 'https://github.com/Sharathbabugv1299/brain-tumor-classification-Using_DeepLearning/raw/main/fine_tuned_resnet50_brain_tumor.h5'
+model_path = 'fine_tuned_resnet50_brain_tumor.h5'
+
+# Download the model if it doesn't exist
+if not os.path.exists(model_path):
+    download_model(model_url, model_path)
+
+# Load the model and check
 def load_model_check():
     try:
-        logger.info("Loading model...")
-        model = load_model('fine_tuned_resnet50_brain_tumor.h5')
-        logger.info("Model loaded successfully.")
-        return model
+        print("Loading model...")
+        model_test = load_model(model_path)
+        print("Model loaded successfully.")
+        return model_test
     except Exception as e:
-        logger.error(f"Error loading the model: {e}")
+        print(f"Error loading the model: {e}")
         return None
 
 # Load the model
 model_test = load_model_check()
 
 def predict_image(img_path, model):
-    if model is None:
-        logger.error("Model is not loaded. Prediction cannot be performed.")
-        return "Model error"
-
-    try:
-        # Load the image and resize it to 224x224 (the size ResNet50 expects)
-        img = image.load_img(img_path, target_size=(224, 224))
-
-        # Convert the image to a numpy array
-        img_array = image.img_to_array(img)
-
-        # Add an extra dimension (for batch size), since the model expects a batch of images
-        img_array = np.expand_dims(img_array, axis=0)
-
-        # Preprocess the image (this is necessary because ResNet50 was trained with certain preprocessing)
-        img_array = preprocess_input(img_array)
-
-        # Predict the class (probability) of the image
-        prediction = model.predict(img_array)
-
-        # Since it's a binary classification (0 or 1), round the prediction to get the class
-        predicted_class = np.round(prediction).astype(int)
-
-        # Output the prediction
-        if predicted_class == 0:
-            return "Brain Tumor"
-        else:
-            return "Healthy"
-    except Exception as e:
-        logger.error(f"Error during prediction: {e}")
-        return "Prediction error"
+    img = image.load_img(img_path, target_size=(224, 224))
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)
+    prediction = model.predict(img_array)
+    predicted_class = np.round(prediction).astype(int)
+    return "Brain Tumor" if predicted_class == 0 else "Healthy"
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Ensure the 'uploads' folder exists
 UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_image():
@@ -80,10 +73,7 @@ def upload_image():
         file.save(img_path)
 
         predicted_label = predict_image(img_path, model_test)
-
-        # Clean up: remove the image after prediction
         os.remove(img_path)
-
         return jsonify({'prediction': f'The model predicts: {predicted_label}'})
     
     return render_template('upload.html')
