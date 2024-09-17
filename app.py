@@ -23,7 +23,7 @@ def download_model(url, filename):
 
 # URL of the raw model file on GitHub
 model_url = 'https://github.com/Sharathbabugv1299/brain-tumor-classification-Using_DeepLearning/raw/main/fine_tuned_resnet50_brain_tumor.h5'
-model_path = 'fine_tuned_resnet50_brain_tumor.h5'
+model_path = 'fine_tuned_resnet50_brain_tumor_updated.h5'
 
 # Download the model if it doesn't exist
 if not os.path.exists(model_path):
