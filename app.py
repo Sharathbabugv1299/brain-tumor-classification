@@ -1,64 +1,20 @@
-import numpy as np
 import os
-import requests
 from flask import Flask, request, render_template, jsonify
-import tensorflow as tf
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.resnet50 import preprocess_input
-from tensorflow.keras.models import load_model
+from gradio_client import Client, handle_file
 
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# Initialize Gradio Client
+client = Client("Hareeharan03/Brain-Tumor_classification")
 
-# Function to download the model file from GitHub
-def download_model(url, filename):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Check if the request was successful
-        with open(filename, 'wb') as f:
-            f.write(response.content)
-        print(f"Model downloaded and saved as {filename}.")
-    except Exception as e:
-        print(f"Error downloading the model: {e}")
+# Define the Gradio API endpoint name
+API_NAME = "/predict"
 
-# URL of the raw model file on GitHub
-model_url = 'https://github.com/Sharathbabugv1299/brain-tumor-classification-Using_DeepLearning/raw/main/fine_tuned_resnet50_brain_tumor.h5'
-model_path = 'fine_tuned_resnet50_brain_tumor_updated.h5'
-
-# Download the model if it doesn't exist
-if not os.path.exists(model_path):
-    download_model(model_url, model_path)
-
-def load_model_check():
-    if not os.path.exists(model_path):
-        download_model(model_url, model_path)
-        if not os.path.exists(model_path):
-            print("Model download failed. Exiting.")
-            return None
-    
-    try:
-        print("Loading model...")
-        model_test = load_model(model_path)
-        print("Model loaded successfully.")
-        return model_test
-    except OSError as e:
-        print(f"OSError while loading the model: {e}")
-        return None
-    except Exception as e:
-        print(f"General error while loading the model: {e}")
-        return None
-
-# Load the model
-model_test = load_model_check()
-
-def predict_image(img_path, model):
-    img = image.load_img(img_path, target_size=(224, 224))
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = preprocess_input(img_array)
-    prediction = model.predict(img_array)
-    predicted_class = np.round(prediction).astype(int)
-    return "Brain Tumor" if predicted_class == 0 else "Healthy"
+def predict_image(img_path):
+    # Use gradio_client to send the image file to the API
+    result = client.predict(
+        img=handle_file(img_path),  # Pass the image file path to the API
+        api_name=API_NAME
+    )
+    return result
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -68,24 +24,36 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# Define the main route to handle image upload
 @app.route('/', methods=['GET', 'POST'])
 def upload_image():
     if request.method == 'POST':
+        # Check if an image was uploaded
         if 'file' not in request.files:
             return jsonify({'error': 'No file uploaded.'})
         file = request.files['file']
         if file.filename == '':
             return jsonify({'error': 'No file selected.'})
 
+        # Save the uploaded image to a temporary path
         img_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(img_path)
 
-        predicted_label = predict_image(img_path, model_test)
+        # Make prediction on the uploaded image using the Gradio API
+        try:
+            prediction = predict_image(img_path)
+        except Exception as e:
+            # Handle exceptions if the API call fails
+            return jsonify({'error': str(e)})
+
+        # Clean up: remove the image after prediction
         os.remove(img_path)
-        return jsonify({'prediction': f'The model predicts: {predicted_label}'})
+
+        # Return the prediction as JSON
+        return jsonify({'prediction': f'The model predicts: {prediction}'})
     
     return render_template('upload.html')
 
+# Run the Flask app
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=True)
