@@ -10,13 +10,13 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-import os
+# import os
 
-if os.path.exists('fine_tuned_resnet50_brain_tumor.h5'):
-    print("Model file found, attempting to load.")
-    model_test = load_model_check()
-else:
-    print("Model file not found!")
+# if os.path.exists('fine_tuned_resnet50_brain_tumor.h5'):
+#     print("Model file found, attempting to load.")
+#     model_test = load_model_check()
+# else:
+#     print("Model file not found!")
 
 # Function to check if the model is loaded correctly
 def load_model_check():
