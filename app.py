@@ -11,7 +11,21 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # Load the saved model
-model_test = load_model('fine_tuned_resnet50_brain_tumor.h5')
+# Function to check if the model is loaded correctly
+def load_model_check():
+    try:
+        print("Loading model...")
+        model_test = load_model('fine_tuned_resnet50_brain_tumor.h5')
+        print("Model loaded successfully.")
+        return model_test
+    except Exception as e:
+        print(f"Error loading the model: {e}")
+        return None
+
+# Load the model and check
+model_test = load_model_check()
+
+# model_test = load_model('fine_tuned_resnet50_brain_tumor.h5')
 
 def predict_image(img_path, model):
     
